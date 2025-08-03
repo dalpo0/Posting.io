@@ -8,23 +8,10 @@ const photoForm = document.getElementById('photoForm');
 const photoUpload = document.getElementById('photoUpload');
 const fileName = document.getElementById('fileName');
 const gallery = document.getElementById('gallery');
-const hoverSound = document.getElementById('hoverSound');
 
-// File Input Display
+// File Selection Handler
 photoUpload.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        fileName.textContent = e.target.files[0].name;
-    } else {
-        fileName.textContent = 'No file selected';
-    }
-});
-
-// Hover Sound Effects
-document.querySelectorAll('.photo-card, button, .file-upload label').forEach(el => {
-    el.addEventListener('mouseenter', () => {
-        hoverSound.currentTime = 0;
-        hoverSound.play();
-    });
+    fileName.textContent = e.target.files[0]?.name || 'No file selected';
 });
 
 // Form Submission
@@ -39,24 +26,24 @@ photoForm.addEventListener('submit', async (e) => {
         return;
     }
 
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop();
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-    
     try {
-        // 1. Upload to Supabase Storage
+        // 1. Generate unique filename
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${Date.now()}.${fileExt}`;
+        
+        // 2. Upload to Supabase Storage
         const { error: uploadError } = await supabase.storage
             .from('photos')
-            .upload(`public/${uniqueName}`, file);
+            .upload(filePath, file);
         
         if (uploadError) throw uploadError;
         
-        // 2. Get Public URL
+        // 3. Get public URL
         const { data: { publicUrl } } = supabase.storage
             .from('photos')
-            .getPublicUrl(`public/${uniqueName}`);
+            .getPublicUrl(filePath);
         
-        // 3. Save to Database
+        // 4. Save to database
         const { error: dbError } = await supabase
             .from('photos')
             .insert([{ 
@@ -66,34 +53,20 @@ photoForm.addEventListener('submit', async (e) => {
         
         if (dbError) throw dbError;
         
-        // 4. Refresh Gallery
-        loadPhotos();
+        // 5. Refresh gallery
+        await loadPhotos();
         
-        // 5. Reset Form
+        // 6. Reset form
         photoForm.reset();
         fileName.textContent = 'No file selected';
         
-        // Success Animation
-        gsap.to('.glow-button', {
-            backgroundColor: '#00ff00',
-            duration: 0.5,
-            yoyo: true,
-            repeat: 1
-        });
-        
     } catch (error) {
         console.error('Upload failed:', error);
-        // Error Animation
-        gsap.to('.glow-button', {
-            backgroundColor: '#ff0000',
-            duration: 0.5,
-            yoyo: true,
-            repeat: 1
-        });
+        alert('Upload failed. Check console for details.');
     }
 });
 
-// Load Photos from Supabase
+// Load Photos
 async function loadPhotos() {
     const { data: photos, error } = await supabase
         .from('photos')
@@ -101,52 +74,19 @@ async function loadPhotos() {
         .order('created_at', { ascending: false });
     
     if (error) {
-        console.error('Error loading photos:', error);
+        console.error('Failed to load photos:', error);
         return;
     }
     
     gallery.innerHTML = photos.map(photo => `
         <div class="photo-card">
             <img src="${photo.image_url}" alt="${photo.title}">
-            <h3>${photo.title}</h3>
+            <div class="photo-info">
+                <h3>${photo.title}</h3>
+            </div>
         </div>
     `).join('');
-    
-    // Add hover animations to new cards
-    document.querySelectorAll('.photo-card').forEach(card => {
-        card.addEventListener('mouseenter', () => {
-            gsap.to(card, {
-                scale: 1.05,
-                duration: 0.3
-            });
-        });
-        card.addEventListener('mouseleave', () => {
-            gsap.to(card, {
-                scale: 1,
-                duration: 0.3
-            });
-        });
-    });
 }
 
-// Initialize on Load
-document.addEventListener('DOMContentLoaded', () => {
-    loadPhotos();
-    
-    // Header animation
-    gsap.from('.neon-header', {
-        y: -50,
-        opacity: 0,
-        duration: 1,
-        ease: "power2.out"
-    });
-    
-    // Form animation
-    gsap.from('.holographic-panel', {
-        y: 50,
-        opacity: 0,
-        duration: 1,
-        delay: 0.3,
-        ease: "power2.out"
-    });
-});
+// Initialize
+document.addEventListener('DOMContentLoaded', loadPhotos);
