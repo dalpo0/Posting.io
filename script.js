@@ -1,92 +1,111 @@
-// Supabase Initialization
+// Supabase Setup
 const supabaseUrl = 'https://orgzlgqzyrzypknyfgnh.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yZ3psZ3F6eXJ6eXBrbnlmZ25oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMTI4ODMsImV4cCI6MjA2OTc4ODg4M30.Zhm8ebL5XK3EWn8tCESB0KedX9QCfaQfMj1yIp5A6-o';
 const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // DOM Elements
-const photoForm = document.getElementById('photoForm');
-const photoUpload = document.getElementById('photoUpload');
-const fileName = document.getElementById('fileName');
-const gallery = document.getElementById('gallery');
+const messageInput = document.getElementById('messageInput');
+const sendButton = document.getElementById('sendButton');
+const messagesContainer = document.getElementById('messages');
 
-// File Selection Handler
-photoUpload.addEventListener('change', (e) => {
-    fileName.textContent = e.target.files[0]?.name || 'No file selected';
+// User Setup
+const currentUser = {
+    id: 'user_' + Math.random().toString(36).substr(2, 9),
+    name: 'User_' + Math.floor(Math.random() * 1000)
+};
+
+// Initialize Chat
+document.addEventListener('DOMContentLoaded', () => {
+    setupRealTime();
+    loadMessages();
+    
+    // Set user name in header
+    document.getElementById('userName').textContent = currentUser.name;
 });
 
-// Form Submission
-photoForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const title = document.getElementById('photoTitle').value;
-    const file = photoUpload.files[0];
-    
-    if (!file || !title) {
-        alert('Please fill all fields');
-        return;
-    }
+// Send Message
+async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text) return;
 
-    try {
-        // 1. Generate unique filename
-        const fileExt = file.name.split('.').pop();
-        const filePath = `${Date.now()}.${fileExt}`;
-        
-        // 2. Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-            .from('photos')
-            .upload(filePath, file);
-        
-        if (uploadError) throw uploadError;
-        
-        // 3. Get public URL
-        const { data: { publicUrl } } = supabase.storage
-            .from('photos')
-            .getPublicUrl(filePath);
-        
-        // 4. Save to database
-        const { error: dbError } = await supabase
-            .from('photos')
-            .insert([{ 
-                title, 
-                image_url: publicUrl 
-            }]);
-        
-        if (dbError) throw dbError;
-        
-        // 5. Refresh gallery
-        await loadPhotos();
-        
-        // 6. Reset form
-        photoForm.reset();
-        fileName.textContent = 'No file selected';
-        
-    } catch (error) {
-        console.error('Upload failed:', error);
-        alert('Upload failed. Check console for details.');
-    }
-});
+    const { error } = await supabase
+        .from('messages')
+        .insert([{
+            text,
+            user_id: currentUser.id,
+            user_name: currentUser.name
+        }]);
 
-// Load Photos
-async function loadPhotos() {
-    const { data: photos, error } = await supabase
-        .from('photos')
-        .select('*')
-        .order('created_at', { ascending: false });
-    
     if (error) {
-        console.error('Failed to load photos:', error);
+        console.error('Send failed:', error);
         return;
     }
-    
-    gallery.innerHTML = photos.map(photo => `
-        <div class="photo-card">
-            <img src="${photo.image_url}" alt="${photo.title}">
-            <div class="photo-info">
-                <h3>${photo.title}</h3>
-            </div>
-        </div>
-    `).join('');
+
+    messageInput.value = '';
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', loadPhotos);
+// Load Initial Messages
+async function loadMessages() {
+    const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+    if (error) {
+        console.error('Load failed:', error);
+        return;
+    }
+
+    renderMessages(messages);
+}
+
+// Real-Time Updates
+function setupRealTime() {
+    supabase
+        .channel('public:messages')
+        .on(
+            'postgres_changes',
+            { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'messages' 
+            },
+            (payload) => {
+                renderMessages([payload.new]);
+                playNotification();
+            }
+        )
+        .subscribe();
+}
+
+// Render Messages
+function renderMessages(messages) {
+    messages.forEach(msg => {
+        const isCurrentUser = msg.user_id === currentUser.id;
+        const messageHTML = `
+            <div class="message ${isCurrentUser ? 'message-out' : 'message-in'}">
+                <div class="message-sender">${msg.user_name}</div>
+                <div class="message-text">${msg.text}</div>
+                <div class="message-time">
+                    ${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    ${isCurrentUser ? '✓✓' : ''}
+                </div>
+            </div>
+        `;
+        messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+    });
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Notification Sound
+function playNotification() {
+    if (document.hidden) {
+        new Audio('assets/notification.mp3').play().catch(e => console.log("Audio error:", e));
+    }
+}
+
+// Event Listeners
+sendButton.addEventListener('click', sendMessage);
+messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
