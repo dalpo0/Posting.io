@@ -1,145 +1,152 @@
-// Supabase Setup
+// Supabase Initialization
 const supabaseUrl = 'https://orgzlgqzyrzypknyfgnh.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yZ3psZ3F6eXJ6eXBrbnlmZ25oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMTI4ODMsImV4cCI6MjA2OTc4ODg4M30.Zhm8ebL5XK3EWn8tCESB0KedX9QCfaQfMj1yIp5A6-o';
 const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// CAPTCHA Game Variables
-let captchaScore = 0;
-let ballInterval;
-const requiredScore = 5;
+// DOM Elements
+const photoForm = document.getElementById('photoForm');
+const photoUpload = document.getElementById('photoUpload');
+const fileName = document.getElementById('fileName');
+const gallery = document.getElementById('gallery');
+const hoverSound = document.getElementById('hoverSound');
 
-// Initialize CAPTCHA Game
-function initCaptchaGame() {
-    const ball = document.getElementById('captchaBall');
-    const counter = document.getElementById('captchaCounter');
-    const overlay = document.getElementById('captchaOverlay');
-
-    // Ball click handler
-    ball.addEventListener('click', () => {
-        captchaScore++;
-        counter.textContent = `${captchaScore}/${requiredScore}`;
-        ball.style.transform = 'scale(0.9)';
-        setTimeout(() => ball.style.transform = 'scale(1)', 100);
-
-        if (captchaScore >= requiredScore) {
-            clearInterval(ballInterval);
-            overlay.style.display = 'none';
-            document.getElementById('uploadBtn').disabled = false;
-        }
-    });
-
-    // Cancel button
-    document.getElementById('cancelCaptcha').addEventListener('click', () => {
-        clearInterval(ballInterval);
-        overlay.style.display = 'none';
-    });
-}
-
-// Move ball randomly
-function startBallMovement() {
-    const ball = document.getElementById('captchaBall');
-    const container = document.querySelector('.captcha-box');
-    let x = 0, y = 0;
-    const speed = 3;
-
-    ballInterval = setInterval(() => {
-        const containerRect = container.getBoundingClientRect();
-        x += (Math.random() - 0.5) * speed;
-        y += (Math.random() - 0.5) * speed;
-
-        // Boundary checks
-        x = Math.max(0, Math.min(x, containerRect.width - 50));
-        y = Math.max(0, Math.min(y, containerRect.height - 70));
-
-        ball.style.left = `${x}px`;
-        ball.style.top = `${y}px`;
-    }, 50);
-}
-
-// Upload Form Handler
-document.getElementById('photoForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // Reset CAPTCHA
-    captchaScore = 0;
-    document.getElementById('captchaCounter').textContent = '0/5';
-    document.getElementById('captchaOverlay').style.display = 'flex';
-    document.getElementById('uploadBtn').disabled = true;
-    startBallMovement();
-    
-    // Wait for CAPTCHA completion
-    while (captchaScore < requiredScore) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    // Proceed with upload
-    const file = document.getElementById('photoUpload').files[0];
-    const filePath = `photos/${Date.now()}_${file.name}`;
-
-    // 1. Upload to storage
-    const { error: uploadError } = await supabase.storage
-        .from('photos')
-        .upload(filePath, file);
-
-    if (uploadError) {
-        alert(`Upload failed: ${uploadError.message}`);
-        return;
-    }
-
-    // 2. Get public URL
-    const { data: { publicUrl } } = supabase.storage
-        .from('photos')
-        .getPublicUrl(filePath);
-
-    // 3. Save to database
-    const { error: dbError } = await supabase
-        .from('photos')
-        .insert({
-            title: document.getElementById('photoTitle').value,
-            image_url: publicUrl,
-            client_fp: await getFingerprint() // Basic bot tracking
-        });
-
-    if (dbError) {
-        alert(`Database error: ${dbError.message}`);
+// File Input Display
+photoUpload.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        fileName.textContent = e.target.files[0].name;
     } else {
-        alert('Photo uploaded successfully!');
-        loadPhotos();
+        fileName.textContent = 'No file selected';
     }
 });
 
-// Generate simple client fingerprint
-async function getFingerprint() {
-    const data = new TextEncoder().encode(
-        navigator.userAgent + 
-        (navigator.hardwareConcurrency || '') +
-        (screen.width * screen.height)
-    );
-    const hash = await crypto.subtle.digest('SHA-1', data);
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
+// Hover Sound Effects
+document.querySelectorAll('.photo-card, button, .file-upload label').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+        hoverSound.currentTime = 0;
+        hoverSound.play();
+    });
+});
 
-// Load photos from Supabase
+// Form Submission
+photoForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const title = document.getElementById('photoTitle').value;
+    const file = photoUpload.files[0];
+    
+    if (!file || !title) {
+        alert('Please fill all fields');
+        return;
+    }
+
+    // Generate unique filename
+    const fileExt = file.name.split('.').pop();
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+    
+    try {
+        // 1. Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+            .from('photos')
+            .upload(`public/${uniqueName}`, file);
+        
+        if (uploadError) throw uploadError;
+        
+        // 2. Get Public URL
+        const { data: { publicUrl } } = supabase.storage
+            .from('photos')
+            .getPublicUrl(`public/${uniqueName}`);
+        
+        // 3. Save to Database
+        const { error: dbError } = await supabase
+            .from('photos')
+            .insert([{ 
+                title, 
+                image_url: publicUrl 
+            }]);
+        
+        if (dbError) throw dbError;
+        
+        // 4. Refresh Gallery
+        loadPhotos();
+        
+        // 5. Reset Form
+        photoForm.reset();
+        fileName.textContent = 'No file selected';
+        
+        // Success Animation
+        gsap.to('.glow-button', {
+            backgroundColor: '#00ff00',
+            duration: 0.5,
+            yoyo: true,
+            repeat: 1
+        });
+        
+    } catch (error) {
+        console.error('Upload failed:', error);
+        // Error Animation
+        gsap.to('.glow-button', {
+            backgroundColor: '#ff0000',
+            duration: 0.5,
+            yoyo: true,
+            repeat: 1
+        });
+    }
+});
+
+// Load Photos from Supabase
 async function loadPhotos() {
     const { data: photos, error } = await supabase
         .from('photos')
         .select('*')
         .order('created_at', { ascending: false });
-
-    if (!error) {
-        document.getElementById('gallery').innerHTML = photos.map(photo => `
-            <div class="photo">
-                <img src="${photo.image_url}" alt="${photo.title}">
-                <div class="photo-info">
-                    <h3>${photo.title}</h3>
-                </div>
-            </div>
-        `).join('');
+    
+    if (error) {
+        console.error('Error loading photos:', error);
+        return;
     }
+    
+    gallery.innerHTML = photos.map(photo => `
+        <div class="photo-card">
+            <img src="${photo.image_url}" alt="${photo.title}">
+            <h3>${photo.title}</h3>
+        </div>
+    `).join('');
+    
+    // Add hover animations to new cards
+    document.querySelectorAll('.photo-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            gsap.to(card, {
+                scale: 1.05,
+                duration: 0.3
+            });
+        });
+        card.addEventListener('mouseleave', () => {
+            gsap.to(card, {
+                scale: 1,
+                duration: 0.3
+            });
+        });
+    });
 }
 
-// Initialize
-window.addEventListener('DOMContentLoaded', () => {
-    initCaptchaGame();
+// Initialize on Load
+document.addEventListener('DOMContentLoaded', () => {
     loadPhotos();
+    
+    // Header animation
+    gsap.from('.neon-header', {
+        y: -50,
+        opacity: 0,
+        duration: 1,
+        ease: "power2.out"
+    });
+    
+    // Form animation
+    gsap.from('.holographic-panel', {
+        y: 50,
+        opacity: 0,
+        duration: 1,
+        delay: 0.3,
+        ease: "power2.out"
+    });
 });
