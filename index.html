@@ -4,47 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photo Gallery</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-            color: #333;
-        }
-        header {
-            background-color: #000;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-        .gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
-        .photo {
-            background-color: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .photo img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .photo-info {
-            padding: 15px;
-        }
-        footer {
-            text-align: center;
-            padding: 20px;
-            background-color: #000;
-            color: white;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header>
@@ -52,31 +12,36 @@
         <p>NONE-EDHINK</p>
     </header>
 
-    <div class="gallery">
-        <!-- Photo 1 -->
-        <div class="photo">
-            <img src="photos/photo1.jpg" alt="Photo 1">
-            <div class="photo-info">
-                <h3>写真タイトル</h3>
-                <p>説明文がここに入ります</p>
-            </div>
+    <!-- CAPTCHA Game (Hidden Initially) -->
+    <div id="captchaOverlay" class="captcha-overlay">
+        <div class="captcha-box">
+            <h2>Prove You're Human!</h2>
+            <p>Click the bouncing ball 5 times:</p>
+            <div id="captchaBall"></div>
+            <p id="captchaCounter">0/5</p>
+            <button id="cancelCaptcha">Cancel</button>
         </div>
-
-        <!-- Photo 2 -->
-        <div class="photo">
-            <img src="photos/photo2.jpg" alt="Photo 2">
-            <div class="photo-info">
-                <h3>フレターサリファー</h3>
-                <p>アルバイト</p>
-                <small>コロナ禍</small>
-            </div>
-        </div>
-
-        <!-- Add more photos as needed -->
     </div>
 
+    <!-- Upload Form -->
+    <div class="post-form">
+        <h2>Upload Photo</h2>
+        <form id="photoForm">
+            <input type="text" id="photoTitle" placeholder="Title" required>
+            <input type="file" id="photoUpload" accept="image/*" required>
+            <button type="submit" id="uploadBtn">Post Photo</button>
+        </form>
+    </div>
+
+    <!-- Gallery -->
+    <div class="gallery" id="gallery"></div>
+
     <footer>
-        <p>&copy; 2023 Photo Gallery. All rights reserved.</p>
+        <p>&copy; 2023 Photo Gallery</p>
     </footer>
+
+    <!-- Supabase + Game Logic -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
 </body>
-  </html>
+</html>
