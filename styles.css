@@ -1,116 +1,198 @@
-/* === Sci-Fi Theme === */
 :root {
-    --neon-blue: #0ff0fc;
-    --neon-pink: #ff2a6d;
-    --neon-purple: #9d00ff;
-    --dark-space: #0d0221;
-    --metal: #e0e0e0;
+    --telegram-blue: #0088cc;
+    --telegram-light: #ebedef;
+    --telegram-dark: #182533;
+    --telegram-text: #333333;
+    --telegram-secondary: #707579;
 }
 
 body {
-    font-family: 'Orbitron', 'Montserrat', sans-serif;
-    background: var(--dark-space);
-    color: var(--metal);
+    font-family: 'Roboto', sans-serif;
     margin: 0;
-    overflow-x: hidden;
+    padding: 0;
+    height: 100vh;
+    background-color: #e7ebf0;
 }
 
-/* Video Background */
-#bgVideo {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    min-width: 100%;
-    min-height: 100%;
-    z-index: -1;
-    opacity: 0.15;
+.app-container {
+    display: flex;
+    height: 100vh;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Header Styles */
-.neon-header {
-    text-align: center;
-    padding: 2rem;
-    margin-top: 1rem;
+/* Sidebar Styles */
+.sidebar {
+    width: 350px;
+    background-color: white;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
 }
 
-.neon-header h1 {
-    font-size: 2.5rem;
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    color: var(--neon-blue);
-    text-shadow: 0 0 10px var(--neon-blue);
+.sidebar-header {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
 }
 
-/* Upload Form */
-.holographic-panel {
-    background: rgba(13, 2, 33, 0.7);
-    border: 1px solid var(--neon-blue);
-    border-radius: 12px;
-    padding: 2rem;
-    backdrop-filter: blur(10px);
-    max-width: 600px;
-    margin: 0 auto;
+.logo {
+    width: 40px;
+    height: 40px;
+    margin-right: 15px;
 }
 
-.input-field {
-    position: relative;
-    margin: 2rem 0;
+.search-box {
+    padding: 10px 15px;
+    border-bottom: 1px solid #e0e0e0;
 }
 
-.input-field input {
+.search-box input {
     width: 100%;
-    padding: 1rem 0;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--neon-pink);
-    color: white;
-    font-size: 1.1rem;
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 1px solid #e0e0e0;
+    outline: none;
 }
 
-.input-field label {
-    position: absolute;
-    top: 1rem;
-    left: 0;
-    color: var(--neon-blue);
-    transition: all 0.3s;
+.chat-list {
+    flex: 1;
+    overflow-y: auto;
 }
 
-.input-field input:focus + label,
-.input-field input:valid + label {
-    top: -1.2rem;
-    font-size: 0.8rem;
-    color: var(--neon-pink);
+.chat-item {
+    padding: 15px 20px;
+    border-bottom: 1px solid #f5f5f5;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-/* Gallery Grid */
-.gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 2rem;
-    padding: 2rem;
+.chat-item:hover {
+    background-color: #f5f5f5;
 }
 
-.photo-card {
-    background: rgba(255,255,255,0.05);
-    border-radius: 12px;
+.chat-item.active {
+    background-color: var(--telegram-light);
+}
+
+.chat-item h4 {
+    margin: 0 0 5px 0;
+    color: var(--telegram-text);
+}
+
+.chat-item p {
+    margin: 0;
+    color: var(--telegram-secondary);
+    font-size: 14px;
+    white-space: nowrap;
     overflow: hidden;
-    transition: transform 0.3s;
+    text-overflow: ellipsis;
 }
 
-.photo-card:hover {
-    transform: scale(1.03);
+/* Chat Area Styles */
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #e7ebf0;
 }
 
-.photo-card img {
-    width: 100%;
-    height: 300px;
-    object-fit: cover;
+.chat-header {
+    padding: 15px 20px;
+    background-color: white;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+}
+
+.messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background-image: url('assets/telegram-bg.png');
+    background-size: cover;
+}
+
+.message {
+    max-width: 60%;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.message-in {
+    background-color: white;
+    margin-right: auto;
+    border-top-left-radius: 0;
+}
+
+.message-out {
+    background-color: #dcf8c6;
+    margin-left: auto;
+    border-top-right-radius: 0;
+}
+
+.message-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--telegram-secondary);
+    margin-top: 5px;
+}
+
+.message-input {
+    padding: 15px;
+    background-color: white;
+    display: flex;
+    align-items: center;
+}
+
+.message-input input {
+    flex: 1;
+    padding: 12px 15px;
+    border-radius: 20px;
+    border: 1px solid #e0e0e0;
+    outline: none;
+}
+
+.message-input button {
+    background-color: var(--telegram-blue);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    margin-left: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.message {
+    animation: fadeIn 0.2s ease-out;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .gallery-grid {
-        grid-template-columns: 1fr;
+    .app-container {
+        flex-direction: column;
     }
-}
+    
+    .sidebar {
+        width: 100%;
+        height: 40vh;
+    }
+    
+    .chat-area {
+        height: 60vh;
+    }
+          }
